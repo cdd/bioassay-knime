@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<knimeNode 
+	icon="./baeicon.png" 
+	type="Source" 
+	xmlns="http://knime.org/node/v2.8" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xsi:schemaLocation="http://knime.org/node/v2.10 http://knime.org/node/v2.10.xsd">
+	
+    <name>BioAssayExpress</name>
+    
+    <shortDescription>
+        Download assays from BioAssay Express servers.
+    </shortDescription>
+    
+    <fullDescription>
+        <intro>
+        	Assays can be selected using query strings. Resulting content is provided in the form of semantic web annotations
+        	that correspond to a well defined schema. Examples of BioAssay Express servers that are publicly available
+        	include http://www.bioassayexpress.com and http://beta.bioassayexpress.com.
+		</intro>
+        
+        <option name="short name of first option (like in the dialog)">description of first option</option>
+        <option name="short name of second option (like in the dialog)">description of second option</option>
+        <!-- possibly more options that can also be grouped by tabs -->
+        <!--
+        <tab name="Standard Options">
+            <option name="short name of first option (like in the dialog)">description of first option</option>
+            <option name="short name of second option (like in the dialog)">description of second option</option>
+        </tab>
+        <tab name="Advanced Options">
+            <option name="short name of first advanced option (like in the dialog)">description of first advanced option</option>
+        </tab>
+        -->
+    </fullDescription>
+    
+    <ports>
+        <!--<inPort index="0" name="In-Port name">Description of first input port...</inPort>-->
+        <!-- possibly more input ports here-->
+        <outPort index="0" name="Assays">Bioassay protocols</outPort>
+    </ports>    
+    <views>
+        <view index="0" name="name of first view">Description of first view...</view>
+        <!--view index="1" name="name of second view">Description of second view...</view-->
+    </views>
+</knimeNode>
