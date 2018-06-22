@@ -43,12 +43,15 @@ public class BAENodeModel extends NodeModel
 	
 	public static String CFGKEY_SITEURL = "SiteURL";
 	public static String CFGKEY_QUERY = "Query";
+	public static String CFGKEY_WITHLABELS = "WithLabels";
 
 	public static final String DEFAULT_SITEURL = "https://beta.bioassayexpress.com";
-	public static final String DEFAULT_QUERY = "()"; // (bao:BAO_0002854=@bao:BAO_0000009)
+	public static final String DEFAULT_QUERY = ""; // (bao:BAO_0002854=@bao:BAO_0000009)
+	public static final boolean DEFAULT_WITHLABELS = true;
 
 	private final SettingsModelString cfgSiteURL = new SettingsModelString(CFGKEY_SITEURL, DEFAULT_SITEURL);
 	private final SettingsModelString cfgQuery = new SettingsModelString(CFGKEY_QUERY, DEFAULT_QUERY);
+	private final SettingsModelBoolean cfgWithLabels = new SettingsModelBoolean(CFGKEY_WITHLABELS, DEFAULT_WITHLABELS);
 
 	protected BAENodeModel()
 	{
@@ -61,24 +64,45 @@ public class BAENodeModel extends NodeModel
 	@Override
 	protected BufferedDataTable[] execute(final BufferedDataTable[] inData, final ExecutionContext exec) throws Exception
 	{
+		try {return perform(inData, exec);}
+		catch (Exception ex)
+		{
+			ex.printStackTrace();
+			throw ex;
+		}
+	}
+	
+	private BufferedDataTable[] perform(final BufferedDataTable[] inData, final ExecutionContext exec) throws Exception
+	{
 		AssayDownload download = new AssayDownload(cfgSiteURL.getStringValue(), cfgQuery.getStringValue());
 		download.obtain();
 		AssayDownload.Assay[] assays = download.getAssays();
+
+		boolean withLabels = cfgWithLabels.getBooleanValue();
+System.out.println("LABELS:"+withLabels);
 
 		// figure out what's going into the columns
 
 		int headerCols = 3, ncolumns = headerCols;
 		Map<String, Integer> assnColumn = new HashMap<>(); // hash-to-column#
-		List<String> assnNames = new ArrayList<>(); // quasi-readable names for applicable assignments
+		Map<String, Integer> assnLabel = new HashMap<>(); // as above, but for the label version
+		List<String> columnNames = new ArrayList<>(); // quasi-readable names for applicable assignments
 		for (AssayDownload.Assay assay : download.getAssays()) for (AssayDownload.Annotation annot : assay.annotations)
 		{
 			String hash = annot.assnHash();
 			if (assnColumn.containsKey(hash)) continue;
-			assnColumn.put(hash, ncolumns++);
-			
+
+			assnColumn.put(hash, ncolumns++);			
 			String colName = "<" + annot.propURI + ">";
 			if (annot.groupNest != null) for (String uri : annot.groupNest) colName += ",<" + uri + ">";
-			assnNames.add(colName);
+			columnNames.add(colName);
+			
+			if (withLabels) 
+			{
+				assnLabel.put(hash, ncolumns++);
+				columnNames.add(annot.propLabel);
+			}
+			
 		}
 		int annotCols = ncolumns - headerCols;
 		
@@ -86,7 +110,8 @@ public class BAENodeModel extends NodeModel
 		columns[0] = new DataColumnSpecCreator("AssayID", LongCell.TYPE).createSpec();
 		columns[1] = new DataColumnSpecCreator("UniqueID", StringCell.TYPE).createSpec();
 		columns[2] = new DataColumnSpecCreator("SchemaURI", StringCell.TYPE).createSpec();
-		for (int n = 0; n < assnNames.size(); n++) columns[headerCols + n] = new DataColumnSpecCreator(assnNames.get(n), StringCell.TYPE).createSpec();
+		for (int n = 0, idx = headerCols; n < columnNames.size(); n++)
+			columns[idx++] = new DataColumnSpecCreator(columnNames.get(n), StringCell.TYPE).createSpec();
 				
 		// populate the table itself
 				
@@ -111,8 +136,14 @@ public class BAENodeModel extends NodeModel
 				String sep = content[i].length() != 0 ? "\n" : "";
 				if (annot.valueURI != null && annot.valueURI.length() > 0)
 					content[i] += sep + "<" + annot.valueURI + ">";
-				else if (annot.valueLabel != null && annot.valueLabel.length() > 0)
+				else if (annot.valueLabel != null && annot.valueLabel.length() > 0 && !withLabels)
 					content[i] += sep + '"' + annot.valueLabel + '"'; 
+					
+				if (withLabels)
+				{
+					i = assnLabel.get(annot.assnHash()) - 3;
+					content[i] += sep + (annot.valueLabel == null ? "" : annot.valueLabel);
+				}
 			}
 			
 			for (int i = headerCols; i < ncolumns; i++) cells[i] = new StringCell(content[i - headerCols]);
@@ -154,6 +185,7 @@ public class BAENodeModel extends NodeModel
 	{
 		cfgSiteURL.saveSettingsTo(settings);
 		cfgQuery.saveSettingsTo(settings);
+		cfgWithLabels.saveSettingsTo(settings);
 	}
 
 	/**
@@ -164,6 +196,7 @@ public class BAENodeModel extends NodeModel
 	{
 		cfgSiteURL.loadSettingsFrom(settings);
 		cfgQuery.loadSettingsFrom(settings);
+		cfgWithLabels.loadSettingsFrom(settings);
 	}
 
 	/**

@@ -49,13 +49,17 @@ public class BAENodeDialog extends DefaultNodeSettingsPane
 
 		SettingsModelString modelSiteURL = new SettingsModelString(BAENodeModel.CFGKEY_SITEURL, BAENodeModel.DEFAULT_SITEURL);
 		SettingsModelString modelQuery = new SettingsModelString(BAENodeModel.CFGKEY_QUERY, BAENodeModel.DEFAULT_QUERY);
+		SettingsModelBoolean modelWithLabels = new SettingsModelBoolean(BAENodeModel.CFGKEY_WITHLABELS, BAENodeModel.DEFAULT_WITHLABELS);
 
 		DialogComponentString dlgSiteURL = new DialogComponentString(modelSiteURL, "Site URL:", true, 80);
 		DialogComponentString dlgQuery = new DialogComponentString(modelQuery, "Query:", false, 80);
+		DialogComponentBoolean dlgWithLabels = new DialogComponentBoolean(modelWithLabels, "With Labels");
 		dlgSiteURL.setToolTipText("Base URL for BioAssayExpress server, e.g. http://www.bioassayexpress.com");
 		dlgQuery.setToolTipText("Assay query string. If blank, acquires all assays. See the Explore and Search pages for composing queries.");
+		dlgWithLabels.setToolTipText("Add extra columns to show the labels to go with the URIs.");
 
 		addDialogComponent(dlgSiteURL);
 		addDialogComponent(dlgQuery);
+		addDialogComponent(dlgWithLabels);
 	}
 }
