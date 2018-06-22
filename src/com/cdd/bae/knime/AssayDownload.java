@@ -39,11 +39,24 @@ public class AssayDownload
 	private String siteURL; // the base URL for the BAE site (e.g. "https://www.bioassayexpress.com")
 	private String query; // the assay selector query (e.g. "()" for all, "(bao:BAO_0002854=@bao:BAO_0000009)" for a simple match)
 
+	public static class Annotation
+	{
+		public String valueURI, valueLabel;
+		public String propURI, propLabel;
+		public String[] groupNest, groupLabel;
+		
+		public String assnHash()
+		{
+			return propURI + "::" + (groupNest == null ? "" : String.join("::", groupNest));
+		}
+	}
+
 	public static class Assay
 	{
 		public long assayID;
 		public String uniqueID;
 		public String schemaURI;
+		public Annotation[] annotations;
 	}
 
 	private List<Assay> assays = new ArrayList<>();
@@ -103,9 +116,26 @@ public class AssayDownload
 	private Assay unpackAssay(JSONObject json) throws JSONException
 	{
 		Assay assay = new Assay();
+		
 		assay.assayID = json.optLong("assayID", 0);
 		assay.uniqueID = json.optString("uniqueID");
 		assay.schemaURI = json.optString("schemaURI");
+		
+		JSONArray jsonList = json.optJSONArrayEmpty("annotations");
+		assay.annotations = new Annotation[jsonList.length()];
+		for (int n = 0; n < assay.annotations.length; n++)
+		{
+			Annotation annot = new Annotation();
+			JSONObject jsonAnnot = jsonList.getJSONObject(n);
+			annot.valueURI = jsonAnnot.optString("valueURI");
+			annot.valueLabel = jsonAnnot.optString("valueLabel");
+			annot.propURI = jsonAnnot.optString("propURI");
+			annot.propLabel = jsonAnnot.optString("propLabel");
+			annot.groupNest = jsonAnnot.optJSONArrayEmpty("groupNest").toStringArray();
+			annot.groupLabel = jsonAnnot.optJSONArrayEmpty("groupLabel").toStringArray();
+			assay.annotations[n] = annot;
+		}
+		
 		return assay;
 	}
 }

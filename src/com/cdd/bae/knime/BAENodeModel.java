@@ -23,6 +23,7 @@
 package com.cdd.bae.knime;
 
 import java.io.*;
+import java.util.*;
 
 import org.knime.core.data.*;
 import org.knime.core.data.def.*;
@@ -62,25 +63,59 @@ public class BAENodeModel extends NodeModel
 	{
 		AssayDownload download = new AssayDownload(cfgSiteURL.getStringValue(), cfgQuery.getStringValue());
 		download.obtain();
-	
-		int ncells = 3;
-		DataColumnSpec[] columns = new DataColumnSpec[ncells];
+		AssayDownload.Assay[] assays = download.getAssays();
+
+		// figure out what's going into the columns
+
+		int headerCols = 3, ncolumns = headerCols;
+		Map<String, Integer> assnColumn = new HashMap<>(); // hash-to-column#
+		List<String> assnNames = new ArrayList<>(); // quasi-readable names for applicable assignments
+		for (AssayDownload.Assay assay : download.getAssays()) for (AssayDownload.Annotation annot : assay.annotations)
+		{
+			String hash = annot.assnHash();
+			if (assnColumn.containsKey(hash)) continue;
+			assnColumn.put(hash, ncolumns++);
+			
+			String colName = "<" + annot.propURI + ">";
+			if (annot.groupNest != null) for (String uri : annot.groupNest) colName += ",<" + uri + ">";
+			assnNames.add(colName);
+		}
+		int annotCols = ncolumns - headerCols;
+		
+		DataColumnSpec[] columns = new DataColumnSpec[ncolumns];
 		columns[0] = new DataColumnSpecCreator("AssayID", LongCell.TYPE).createSpec();
 		columns[1] = new DataColumnSpecCreator("UniqueID", StringCell.TYPE).createSpec();
 		columns[2] = new DataColumnSpecCreator("SchemaURI", StringCell.TYPE).createSpec();
+		for (int n = 0; n < assnNames.size(); n++) columns[headerCols + n] = new DataColumnSpecCreator(assnNames.get(n), StringCell.TYPE).createSpec();
+				
+		// populate the table itself
 				
 		DataTableSpec outputSpec = new DataTableSpec(columns);
 		BufferedDataContainer container = exec.createDataContainer(outputSpec);
 		
-		AssayDownload.Assay[] assays = download.getAssays();
 		for (int n = 0; n < assays.length; n++)
 		{
 			RowKey key = new RowKey("Row#" + (n + 1));
 			
-			DataCell[] cells = new DataCell[ncells];
+			DataCell[] cells = new DataCell[ncolumns];
 			cells[0] = new LongCell(assays[n].assayID);
 			cells[1] = new StringCell(assays[n].uniqueID);
 			cells[2] = new StringCell(assays[n].schemaURI);
+			
+			// fill in all of the cells that represent annotation values
+			String[] content = new String[annotCols];
+			for (int i = 0; i < annotCols; i++) content[i] = "";
+			for (AssayDownload.Annotation annot : assays[n].annotations)
+			{
+				int i = assnColumn.get(annot.assnHash()) - 3;
+				String sep = content[i].length() != 0 ? "\n" : "";
+				if (annot.valueURI != null && annot.valueURI.length() > 0)
+					content[i] += sep + "<" + annot.valueURI + ">";
+				else if (annot.valueLabel != null && annot.valueLabel.length() > 0)
+					content[i] += sep + '"' + annot.valueLabel + '"'; 
+			}
+			
+			for (int i = headerCols; i < ncolumns; i++) cells[i] = new StringCell(content[i - headerCols]);
 
 			DataRow row = new DefaultRow(key, cells);
 			container.addRowToTable(row);
@@ -100,9 +135,6 @@ public class BAENodeModel extends NodeModel
 	@Override
 	protected void reset()
 	{
-		// TODO Code executed on reset.
-		// Models build during execute are cleared here.
-		// Also data handled in load/saveInternals will be erased here.
 	}
 
 	/**
