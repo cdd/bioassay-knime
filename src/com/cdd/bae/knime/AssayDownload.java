@@ -74,6 +74,9 @@ public class AssayDownload
 	{
 		String url = siteURL + "/servlet/DownloadQuery?query=" + URLEncoder.encode(query, "UTF-8") + "&assays=true";
 		
+		// emit the URL to the console, because it has reference value: the user can paste it into the browser and get a zip file
+		System.out.println("BioAssayExpress connection URL: [" + url + "]");
+		
 		try
 		{
 			HttpURLConnection conn = (HttpURLConnection)new URL(url).openConnection();
@@ -94,7 +97,7 @@ public class AssayDownload
 				while (ze != null)
 				{
 					String path = ze.getName(), name = new File(path).getName();
-					if (path.endsWith(".json"))
+					if (path.startsWith("assay") && path.endsWith(".json"))
 					{
 						JSONObject json = new JSONObject(new JSONTokener(zip));
 						assays.add(unpackAssay(json));
